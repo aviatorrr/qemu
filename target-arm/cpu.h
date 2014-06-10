@@ -990,6 +990,24 @@ enum {
     ARM_CP_STATE_BOTH = 2,
 };
 
+/* ARM CP register secure state flags.  These flags identify security state
+ * attributes for a given CP register entry.
+ * The existence of both or neither secure and non-secure flags indicates that
+ * the register has both a secure and non-secure hash entry.  A single one of
+ * these flags causes the register to only be hashed for the specified
+ * security state.
+ * Although definitions may have any combination of the S/NS bits, each
+ * registered entry will only have one to identify whether the entry is secure
+ * or non-secure.
+ */
+enum {
+    ARM_CP_SECSTATE_S =   (1 << 0), /* bit[0]: Secure state register */
+    ARM_CP_SECSTATE_NS =  (1 << 1), /* bit[1]: Non-secure state register */
+};
+
+/* Convenience macro for checking for a specific bit */
+#define ARM_CP_SECSTATE_TEST(_ri, _flag) (((_ri)->secure & (_flag)) == (_flag))
+
 /* Return true if cptype is a valid type field. This is used to try to
  * catch errors where the sentinel has been accidentally left off the end
  * of a list of registers.
@@ -1124,6 +1142,8 @@ struct ARMCPRegInfo {
     int type;
     /* Access rights: PL*_[RW] */
     int access;
+    /* Security state: ARM_CP_SECSTATE_* bits/values */
+    int secure;
     /* The opaque pointer passed to define_arm_cp_regs_with_opaque() when
      * this register was defined: can be used to hand data through to the
      * register read/write functions, since they are passed the ARMCPRegInfo*.
@@ -1133,12 +1153,36 @@ struct ARMCPRegInfo {
      * fieldoffset is non-zero, the reset value of the register.
      */
     uint64_t resetvalue;
-    /* Offset of the field in CPUARMState for this register. This is not
-     * needed if either:
+    /* Offsets of the fields (secure/non-secure) in CPUARMState for this
+     * register. The array will be accessed by the ns bit which means the
+     * secure instance has to be at [0] while the non-secure instance must be
+     * at [1]. If a register is not banked .fieldoffset can be used, which maps
+     * to the non-secure bank.
+     *
+     * Extra padding is added to align the default fieldoffset field with the
+     * non-secure bank_fieldoffsets entry.  This is necessary for maintaining
+     * the same storage offset when AArch64 and banked AArch32 are seperately
+     * defined.
+     *
+     * This is not needed if either:
      *  1. type is ARM_CP_CONST or one of the ARM_CP_SPECIALs
      *  2. both readfn and writefn are specified
      */
-    ptrdiff_t fieldoffset; /* offsetof(CPUARMState, field) */
+    union { /* offsetof(CPUARMState, field) */
+        struct {
+            ptrdiff_t _fieldoffset_padding;
+            ptrdiff_t fieldoffset;
+        } _fieldoffset_s;
+        ptrdiff_t bank_fieldoffsets[2];
+    } _fieldoffset_u;
+
+/*
+ * GCC-4.4 can't handle the anonymous union/struct combos, so we'll add names
+ * along with macros for short-cutting the field names.
+ */
+#define bank_fieldoffsets _fieldoffset_u.bank_fieldoffsets
+#define fieldoffset _fieldoffset_u._fieldoffset_s.fieldoffset
+
     /* Function for making any access checks for this register in addition to
      * those specified by the 'access' permissions bits. If NULL, no extra
      * checks required. The access check is performed at runtime, not at
