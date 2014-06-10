@@ -1551,6 +1551,8 @@ static inline bool arm_singlestep_active(CPUARMState *env)
  */
 #define ARM_TBFLAG_XSCALE_CPAR_SHIFT 20
 #define ARM_TBFLAG_XSCALE_CPAR_MASK (3 << ARM_TBFLAG_XSCALE_CPAR_SHIFT)
+#define ARM_TBFLAG_NS_SHIFT         22
+#define ARM_TBFLAG_NS_MASK          (1 << ARM_TBFLAG_NS_SHIFT)
 
 /* Bit usage when in AArch64 state */
 #define ARM_TBFLAG_AA64_EL_SHIFT    0
@@ -1595,6 +1597,8 @@ static inline bool arm_singlestep_active(CPUARMState *env)
     (((F) & ARM_TBFLAG_AA64_SS_ACTIVE_MASK) >> ARM_TBFLAG_AA64_SS_ACTIVE_SHIFT)
 #define ARM_TBFLAG_AA64_PSTATE_SS(F) \
     (((F) & ARM_TBFLAG_AA64_PSTATE_SS_MASK) >> ARM_TBFLAG_AA64_PSTATE_SS_SHIFT)
+#define ARM_TBFLAG_NS(F) \
+    (((F) & ARM_TBFLAG_NS_MASK) >> ARM_TBFLAG_NS_SHIFT)
 
 static inline void cpu_get_tb_cpu_state(CPUARMState *env, target_ulong *pc,
                                         target_ulong *cs_base, int *flags)
@@ -1643,6 +1647,9 @@ static inline void cpu_get_tb_cpu_state(CPUARMState *env, target_ulong *pc,
         }
         if (privmode) {
             *flags |= ARM_TBFLAG_PRIV_MASK;
+        }
+        if (!(use_secure_reg(env))) {
+            *flags |= ARM_TBFLAG_NS_MASK;
         }
         if (env->vfp.xregs[ARM_VFP_FPEXC] & (1 << 30)
             || arm_el_is_aa64(env, 1)) {
