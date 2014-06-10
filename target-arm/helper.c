@@ -1597,8 +1597,14 @@ static void vmsa_ttbcr_raw_write(CPUARMState *env, const ARMCPRegInfo *ri,
      * and the c2_mask and c2_base_mask values are meaningless.
      */
     raw_write(env, ri, value);
-    env->cp15.c2_mask = ~(((uint32_t)0xffffffffu) >> maskshift);
-    env->cp15.c2_base_mask = ~((uint32_t)0x3fffu >> maskshift);
+
+    /* Update the masks corresponding to the the TTBCR bank being written */
+    A32_BANKED_REG_SET(env, c2_mask,
+                       ARM_CP_SECSTATE_TEST(ri, ARM_CP_SECSTATE_S),
+                       ~(((uint32_t)0xffffffffu) >> maskshift));
+    A32_BANKED_REG_SET(env, c2_base_mask,
+                       ARM_CP_SECSTATE_TEST(ri, ARM_CP_SECSTATE_S),
+                       ~((uint32_t)0x3fffu >> maskshift));
 }
 
 static void vmsa_ttbcr_write(CPUARMState *env, const ARMCPRegInfo *ri,
@@ -1617,9 +1623,15 @@ static void vmsa_ttbcr_write(CPUARMState *env, const ARMCPRegInfo *ri,
 
 static void vmsa_ttbcr_reset(CPUARMState *env, const ARMCPRegInfo *ri)
 {
-    env->cp15.c2_base_mask = 0xffffc000u;
+    /* Rest both the TTBCR as well as the masks corresponding to the bank of
+     * the TTBCR being reset.
+     */
+    A32_BANKED_REG_SET(env, c2_base_mask,
+                       ARM_CP_SECSTATE_TEST(ri, ARM_CP_SECSTATE_S),
+                       0xffffc000u);
+    A32_BANKED_REG_SET(env, c2_mask,
+                       ARM_CP_SECSTATE_TEST(ri, ARM_CP_SECSTATE_S), 0);
     raw_write(env, ri, 0);
-    env->cp15.c2_mask = 0;
 }
 
 static void vmsa_tcr_el1_write(CPUARMState *env, const ARMCPRegInfo *ri,
@@ -4498,7 +4510,7 @@ static bool get_level1_table_address(CPUARMState *env, uint32_t *table,
      * AArch32 there is a secure and non-secure instance of the translation
      * table registers.
      */
-    if (address & env->cp15.c2_mask) {
+    if (address & A32_BANKED_CURRENT_REG_GET(env, c2_mask)) {
         if (A32_BANKED_CURRENT_REG_GET(env, ttbcr) & TTBCR_PD1) {
             /* Translation table walk disabled for TTBR1 */
             return false;
@@ -4510,7 +4522,7 @@ static bool get_level1_table_address(CPUARMState *env, uint32_t *table,
             return false;
         }
         *table = A32_BANKED_CURRENT_REG_GET(env, ttbr0) &
-                 env->cp15.c2_base_mask;
+                 A32_BANKED_CURRENT_REG_GET(env, c2_base_mask);
     }
     *table |= (address >> 18) & 0x3ffc;
     return true;
