@@ -274,7 +274,7 @@ static void pxa2xx_pwrmode_write(CPUARMState *env, const ARMCPRegInfo *ri,
         s->cpu->env.daif = PSTATE_A | PSTATE_F | PSTATE_I;
         s->cpu->env.cp15.sctlr_ns = 0;
         s->cpu->env.cp15.c1_coproc = 0;
-        s->cpu->env.cp15.ttbr0_el1 = 0;
+        s->cpu->env.cp15.ttbr0_el[1] = 0;
         s->cpu->env.cp15.c3 = 0;
         s->pm_regs[PSSR >> 2] |= 0x8; /* Set STS */
         s->pm_regs[RCSR >> 2] |= 0x8; /* Set GPR */
@@ -2046,7 +2046,7 @@ PXA2xxState *pxa270_init(MemoryRegion *address_space,
     }
     if (!revision)
         revision = "pxa270";
-    
+
     s->cpu = cpu_arm_init(revision);
     if (s->cpu == NULL) {
         fprintf(stderr, "Unable to find CPU definition\n");
