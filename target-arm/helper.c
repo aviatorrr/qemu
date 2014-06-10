@@ -918,9 +918,9 @@ static const ARMCPRegInfo v7_cp_reginfo[] = {
       .resetvalue = 0, .writefn = pmintenclr_write, },
     { .name = "VBAR", .state = ARM_CP_STATE_BOTH,
       .opc0 = 3, .crn = 12, .crm = 0, .opc1 = 0, .opc2 = 0,
-      .access = PL1_RW, .writefn = vbar_write,
-      .fieldoffset = offsetof(CPUARMState, cp15.vbar_el[1]),
-      .resetvalue = 0 },
+      .access = PL1_RW, .writefn = vbar_write, .resetvalue = 0,
+      .bank_fieldoffsets = { offsetof(CPUARMState, cp15.vbar_s),
+                             offsetof(CPUARMState, cp15.vbar_ns) } },
     { .name = "CCSIDR", .state = ARM_CP_STATE_BOTH,
       .opc0 = 3, .crn = 0, .crm = 0, .opc1 = 1, .opc2 = 0,
       .access = PL1_R, .readfn = ccsidr_read, .type = ARM_CP_NO_MIGRATE },
@@ -1432,7 +1432,7 @@ static void ats_write(CPUARMState *env, const ARMCPRegInfo *ri, uint64_t value)
              * fault.
              */
         }
-        env->cp15.par_el1 = par64;
+        A32_BANKED_CURRENT_REG_SET(env, par, par64);
     } else {
         /* ret is a DFSR/IFSR value for the short descriptor
          * translation table format (with WnR always clear).
@@ -1442,14 +1442,16 @@ static void ats_write(CPUARMState *env, const ARMCPRegInfo *ri, uint64_t value)
             /* We do not set any attribute bits in the PAR */
             if (page_size == (1 << 24)
                 && arm_feature(env, ARM_FEATURE_V7)) {
-                env->cp15.par_el1 = (phys_addr & 0xff000000) | 1 << 1;
+                A32_BANKED_CURRENT_REG_SET(env, par,
+                        (phys_addr & 0xff000000) | 1 << 1);
             } else {
-                env->cp15.par_el1 = phys_addr & 0xfffff000;
+                A32_BANKED_CURRENT_REG_SET(env, par, phys_addr & 0xfffff000);
             }
         } else {
-            env->cp15.par_el1 = ((ret & (1 << 10)) >> 5) |
-                ((ret & (1 << 12)) >> 6) |
-                ((ret & 0xf) << 1) | 1;
+            A32_BANKED_CURRENT_REG_SET(env, par,
+                    ((ret & (1 << 10)) >> 5) |
+                    ((ret & (1 << 12)) >> 6) |
+                    ((ret & 0xf) << 1) | 1);
         }
     }
 }
@@ -1457,9 +1459,9 @@ static void ats_write(CPUARMState *env, const ARMCPRegInfo *ri, uint64_t value)
 
 static const ARMCPRegInfo vapa_cp_reginfo[] = {
     { .name = "PAR", .cp = 15, .crn = 7, .crm = 4, .opc1 = 0, .opc2 = 0,
-      .access = PL1_RW, .resetvalue = 0,
-      .fieldoffset = offsetoflow32(CPUARMState, cp15.par_el1),
-      .writefn = par_write },
+      .access = PL1_RW, .resetvalue = 0, .writefn = par_write,
+      .bank_fieldoffsets = { offsetoflow32(CPUARMState, cp15.par_s),
+                             offsetoflow32(CPUARMState, cp15.par_ns) } },
 #ifndef CONFIG_USER_ONLY
     { .name = "ATS", .cp = 15, .crn = 7, .crm = 8, .opc1 = 0, .opc2 = CP_ANY,
       .access = PL1_W, .accessfn = ats_access,
@@ -1915,8 +1917,9 @@ static const ARMCPRegInfo lpae_cp_reginfo[] = {
       .access = PL1_RW, .type = ARM_CP_CONST | ARM_CP_OVERRIDE,
       .resetvalue = 0 },
     { .name = "PAR", .cp = 15, .crm = 7, .opc1 = 0,
-      .access = PL1_RW, .type = ARM_CP_64BIT,
-      .fieldoffset = offsetof(CPUARMState, cp15.par_el1), .resetvalue = 0 },
+      .access = PL1_RW, .type = ARM_CP_64BIT, .resetvalue = 0,
+      .bank_fieldoffsets = { offsetof(CPUARMState, cp15.par_s),
+                             offsetof(CPUARMState, cp15.par_ns)} },
     { .name = "TTBR0", .cp = 15, .crm = 2, .opc1 = 0,
       .access = PL1_RW, .type = ARM_CP_64BIT | ARM_CP_NO_MIGRATE,
       .bank_fieldoffsets = { offsetof(CPUARMState, cp15.ttbr0_s),
@@ -4426,7 +4429,7 @@ void arm_cpu_do_interrupt(CPUState *cs)
          * This register is only followed in non-monitor mode, and is banked.
          * Note: only bits 31:5 are valid.
          */
-        addr += env->cp15.vbar_el[1];
+        addr += A32_BANKED_CURRENT_REG_GET(env, vbar);
     }
 
     if ((env->uncached_cpsr & CPSR_M) == ARM_CPU_MODE_MON) {
