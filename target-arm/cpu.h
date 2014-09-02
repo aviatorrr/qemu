@@ -305,7 +305,17 @@ typedef struct CPUARMState {
         uint32_t c9_pmxevtyper; /* perf monitor event type */
         uint32_t c9_pmuserenr; /* perf monitor user enable */
         uint32_t c9_pminten; /* perf monitor interrupt enables */
-        uint64_t mair_el1;
+        union { /* Memory attribute redirection */
+            struct {
+                uint64_t _unused_mair_0;
+                uint32_t mair0_ns;
+                uint32_t mair1_ns;
+                uint64_t _unused_mair_1;
+                uint32_t mair0_s;
+                uint32_t mair1_s;
+            };
+            uint64_t mair_el[4];
+        };
         union { /* vector base address register */
             struct {
                 uint64_t _unused_vbar;
