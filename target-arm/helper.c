@@ -3288,7 +3288,7 @@ CpuDefinitionInfoList *arch_query_cpu_definitions(Error **errp)
 
 static void add_cpreg_to_hashtable(ARMCPU *cpu, const ARMCPRegInfo *r,
                                    void *opaque, int state,
-                                   int crm, int opc1, int opc2)
+                                   int crm, int opc1, int opc2, int nsbit)
 {
     /* Private utility function for define_one_arm_cp_reg_with_opaque():
      * add a single reginfo struct to the hash table.
@@ -3327,7 +3327,7 @@ static void add_cpreg_to_hashtable(ARMCPU *cpu, const ARMCPRegInfo *r,
         *key = ENCODE_AA64_CP_REG(r2->cp, r2->crn, crm,
                                   r2->opc0, opc1, opc2);
     } else {
-        *key = ENCODE_CP_REG(r2->cp, is64, r2->crn, crm, opc1, opc2);
+        *key = ENCODE_CP_REG(r2->cp, is64, r2->crn, crm, opc1, opc2, nsbit);
     }
     if (opaque) {
         r2->opaque = opaque;
@@ -3477,7 +3477,7 @@ void define_one_arm_cp_reg_with_opaque(ARMCPU *cpu,
                         continue;
                     }
                     add_cpreg_to_hashtable(cpu, r, opaque, state,
-                                           crm, opc1, opc2);
+                                           crm, opc1, opc2, SCR_NS);
                 }
             }
         }
