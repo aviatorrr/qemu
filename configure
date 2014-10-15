@@ -318,6 +318,7 @@ vhdx=""
 numa=""
 tcmalloc="no"
 jemalloc="no"
+pcsc=""
 
 # parse CC options first
 for opt do
@@ -1145,6 +1146,10 @@ for opt do
   ;;
   --enable-jemalloc) jemalloc="yes"
   ;;
+  --disable-pcsc-passthru) pcsc="no"
+  ;;
+  --enable-pcsc-passthru) pcsc="yes"
+  ;;
   *)
       echo "ERROR: unknown option $opt"
       echo "Try '$0 --help' for more information"
@@ -1367,6 +1372,7 @@ disabled with --disable-FEATURE, default is enabled if available:
   numa            libnuma support
   tcmalloc        tcmalloc support
   jemalloc        jemalloc support
+  pcsc            PCSC Passthrough support
 
 NOTE: The object files are built at the place where configure is launched
 EOF
@@ -5867,6 +5873,10 @@ fi
 
 if test "$ccache_cpp2" = "yes"; then
   echo "export CCACHE_CPP2=y" >> $config_host_mak
+fi
+
+if test "$pcsc" = "yes"; then
+  echo "CONFIG_PCSC_PASSTHRU=y" >> $config_host_mak
 fi
 
 # build tree in object directory in case the source is not in the current directory

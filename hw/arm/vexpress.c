@@ -82,6 +82,9 @@ enum {
     VE_USB,
     VE_DAPROM,
     VE_VIRTIO,
+#if defined(CONFIG_PCSC_PASSTHRU)
+    VE_PCSC,
+#endif
 };
 
 static hwaddr motherboard_legacy_map[] = {
@@ -152,6 +155,9 @@ static hwaddr motherboard_aseries_map[] = {
     [VE_RTC] = 0x1c170000,
     [VE_COMPACTFLASH] = 0x1c1a0000,
     [VE_CLCD] = 0x1c1f0000,
+#if defined(CONFIG_PCSC_PASSTHRU)
+    [VE_PCSC] = 0x1f000000,
+#endif
 };
 
 /* Structure defining the peculiarities of a specific daughterboard */
@@ -643,6 +649,11 @@ static void vexpress_common_init(MachineState *machine)
     /* VE_COMPACTFLASH: not modelled */
 
     sysbus_create_simple("pl111", map[VE_CLCD], pic[14]);
+
+#if defined(CONFIG_PCSC_PASSTHRU)
+    /* use reserved irq line */
+    sysbus_create_simple("pcsc-passthru", map[VE_PCSC], pic[47]);
+#endif
 
     dinfo = drive_get_next(IF_PFLASH);
     pflash0 = ve_pflash_cfi01_register(map[VE_NORFLASH0], "vexpress.flash0",
