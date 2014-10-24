@@ -142,6 +142,9 @@ static const MemMapEntry a15memmap[] = {
     [VIRT_FW_CFG] =             { 0x09020000, 0x00000018 },
     [VIRT_GPIO] =               { 0x09030000, 0x00001000 },
     [VIRT_SECURE_UART] =        { 0x09040000, 0x00001000 },
+#if defined(CONFIG_PCSC_PASSTHRU)
+    [VIRT_PCSC] =               { 0x09100000, 0x00001000 },
+#endif
     [VIRT_MMIO] =               { 0x0a000000, 0x00000200 },
     /* ...repeating for a total of NUM_VIRTIO_TRANSPORTS, each of that size */
     [VIRT_PLATFORM_BUS] =       { 0x0c000000, 0x02000000 },
@@ -158,6 +161,9 @@ static const int a15irqmap[] = {
     [VIRT_UART] = 1,
     [VIRT_RTC] = 2,
     [VIRT_PCIE] = 3, /* ... to 6 */
+#if defined(CONFIG_PCSC_PASSTHRU)
+    [VIRT_PCSC] = 4,
+#endif
     [VIRT_GPIO] = 7,
     [VIRT_SECURE_UART] = 8,
     [VIRT_MMIO] = 16, /* ...to 16 + NUM_VIRTIO_TRANSPORTS - 1 */
@@ -635,6 +641,29 @@ static void create_gpio(const VirtBoardInfo *vbi, qemu_irq *pic)
 
     g_free(nodename);
 }
+
+#if defined(CONFIG_PCSC_PASSTHRU)
+static void create_pcsc(const VirtBoardInfo *vbi, qemu_irq *pic)
+{
+    char *nodename;
+    hwaddr base = vbi->memmap[VIRT_PCSC].base;
+    hwaddr size = vbi->memmap[VIRT_PCSC].size;
+    int irq = vbi->irqmap[VIRT_PCSC];
+    const char compat[] = "linaro,pcsc-passthru";
+
+    sysbus_create_simple("pcsc-passthru", base, pic[irq]);
+
+    nodename = g_strdup_printf("/pcsc@%" PRIx64, base);
+    qemu_fdt_add_subnode(vbi->fdt, nodename);
+    qemu_fdt_setprop(vbi->fdt, nodename, "compatible", compat, sizeof(compat));
+    qemu_fdt_setprop_sized_cells(vbi->fdt, nodename, "reg",
+                                 2, base, 2, size);
+    qemu_fdt_setprop_cells(vbi->fdt, nodename, "interrupts",
+                           GIC_FDT_IRQ_TYPE_SPI, irq,
+                           GIC_FDT_IRQ_FLAGS_LEVEL_HI);
+    g_free(nodename);
+}
+#endif
 
 static void create_virtio_devices(const VirtBoardInfo *vbi, qemu_irq *pic)
 {
@@ -1250,6 +1279,10 @@ static void machvirt_init(MachineState *machine)
     }
 
     create_rtc(vbi, pic);
+
+#if defined(CONFIG_PCSC_PASSTHRU)
+    create_pcsc(vbi, pic);
+#endif
 
     create_pcie(vbi, pic, vms->highmem);
 
