@@ -111,3 +111,4 @@ TAGS
 tests/qemu-iotests/common.env
 *.swp
 *~
+tests/qemu-iotests/common.env
