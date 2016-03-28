@@ -161,11 +161,11 @@ static const int a15irqmap[] = {
     [VIRT_UART] = 1,
     [VIRT_RTC] = 2,
     [VIRT_PCIE] = 3, /* ... to 6 */
-#if defined(CONFIG_PCSC_PASSTHRU)
-    [VIRT_PCSC] = 4,
-#endif
     [VIRT_GPIO] = 7,
     [VIRT_SECURE_UART] = 8,
+#if defined(CONFIG_PCSC_PASSTHRU)
+    [VIRT_PCSC] = 9,
+#endif
     [VIRT_MMIO] = 16, /* ...to 16 + NUM_VIRTIO_TRANSPORTS - 1 */
     [VIRT_GIC_V2M] = 48, /* ...to 48 + NUM_GICV2M_SPIS - 1 */
     [VIRT_PLATFORM_BUS] = 112, /* ...to 112 + PLATFORM_BUS_NUM_IRQS -1 */
